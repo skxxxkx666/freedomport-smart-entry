@@ -1,0 +1,28 @@
+{
+  "name": "freedomport-smart-entry",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "FreedomPort 智能入口：自动检测国内与国际入口 HTTP 延迟并跳转到最快入口",
+  "scripts": {
+    "dev": "vite",
+    "type-check": "vue-tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "vue-tsc --noEmit -p tsconfig.json && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^25.0.1",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^3.0.5",
+    "vue-tsc": "^2.2.0"
+  }
+}

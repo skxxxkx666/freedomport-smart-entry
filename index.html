@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="自动检测国内与国际入口延迟，并选择更快的访问入口"
+    />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>FreedomPort 智能入口</title>
+    <script>
+      // 首帧前确定主题：用户手动选择（sessionStorage）优先，否则跟随系统偏好，
+      // 避免页面加载时以错误主题闪烁。主题色 meta 由 useTheme 在应用启动后同步。
+      ;(function () {
+        var theme = 'light'
+        try {
+          var saved = window.sessionStorage.getItem('freedomport-theme')
+          if (saved === 'light' || saved === 'dark') {
+            theme = saved
+          } else if (
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches
+          ) {
+            theme = 'dark'
+          }
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', theme)
+      })()
+    </script>
+  </head>
+  <body>
+    <!--
+      CONTRACT: FreedomPort 智能入口 (smart-entry)
+      THESIS: a calm, exact instrument for one decision — measure, recommend, enter. It refuses the busy "compare-cards dashboard" look.
+      OWN-WORLD: warm paper neutrals with one harbor-teal accent, mirrored by a neutral graphite dark theme; system sans type; soft 1px hairlines; latency read in mono numerals.
+      STORY: the visitor sees two entries being tested live, understands the recommended one at a glance, and is taken there in 2s.
+      FIRST VIEWPORT: top bar with brand wordmark and theme toggle, one-sentence heading, two side-by-side entry cards with live status + mono latency, recommendation line, then a 2-second countdown with a shrinking bar.
+      FORM: restrained instrument panel, built code-first.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+    -->
+    <div id="app"></div>
+    <noscript>
+      <div class="noscript">
+        <p>JavaScript 已被禁用，请手动选择入口。</p>
+        <ul>
+          <li><a href="https://cn.freedomport.cc">国内入口</a></li>
+          <li><a href="https://app.freedomport.cc">国际入口</a></li>
+        </ul>
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
