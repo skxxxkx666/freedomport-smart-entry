@@ -104,7 +104,7 @@ function latencyText(endpointId: string): string {
 
     <template v-else>
       <div class="recommendation__head">
-        <p class="recommendation__title">两个入口当前均无法连接</p>
+        <p class="recommendation__title">暂未检测到可用入口</p>
         <p class="recommendation__detail">请手动选择入口，或稍后重新测速</p>
       </div>
       <div class="recommendation__actions">

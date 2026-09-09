@@ -46,6 +46,7 @@ export async function measureFetch(
   timeoutMs: number,
   signal?: AbortSignal,
 ): Promise<FetchOutcome> {
+  if (signal?.aborted) throw new AbortedError()
   const controller = new AbortController()
   const onOuterAbort = () => controller.abort()
   signal?.addEventListener('abort', onOuterAbort)
@@ -94,6 +95,7 @@ export function measureImage(
   timeoutMs: number,
   signal?: AbortSignal,
 ): Promise<ImageOutcome> {
+  if (signal?.aborted) return Promise.reject(new AbortedError())
   return new Promise((resolve, reject) => {
     const img = new Image()
     const start = performance.now()
@@ -114,6 +116,7 @@ export function measureImage(
       img.onload = null
       img.onerror = null
       img.src = ''
+      signal?.removeEventListener('abort', onOuterAbort)
       reject(new AbortedError())
     }
     signal?.addEventListener('abort', onOuterAbort)

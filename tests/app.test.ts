@@ -48,6 +48,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
@@ -72,6 +73,46 @@ async function resolveAllUntilDone() {
 }
 
 describe('App 测速编排', () => {
+  it('一个入口成功、另一个挂起时，不等待慢入口并在3秒预算内跳转', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(App)
+    await flushPromises()
+    expect(pendingCalls).toHaveLength(2)
+    await vi.advanceTimersByTimeAsync(1800)
+    const first = pendingCalls[0]
+    first.done = true
+    first.resolve(new Response('ok', { status: 200 }))
+    await flushPromises()
+    expect(wrapper.text()).toContain('推荐进入')
+    expect(pendingCalls[1].done).toBe(true)
+    await vi.advanceTimersByTimeAsync(1200)
+    expect(redirectTo).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
+
+  it('两个入口都挂起时3秒结束自动检测，不跳转且可手动进入', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(App)
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(3000)
+    await flushPromises()
+    expect(wrapper.text()).toContain('暂未检测到可用入口')
+    expect(redirectTo).not.toHaveBeenCalled()
+    await wrapper.findAll('button').find((button) => button.text() === '进入国内入口')!.trigger('click')
+    expect(redirectTo).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
+
+  it('检测期间手动进入会取消探测，之后不会再次自动跳转', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '进入国际入口')!.trigger('click')
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(redirectTo).toHaveBeenCalledTimes(1)
+    expect(pendingCalls.every((call) => call.done)).toBe(true)
+    wrapper.unmount()
+  })
   it('测速完成后展示推荐结果并开始倒计时', async () => {
     const wrapper = mount(App)
     await flushPromises()
@@ -120,6 +161,8 @@ describe('App 测速编排', () => {
     await resolveAllUntilDone()
 
     // 新测速结果生效
+    const fullRunCalls = pendingCalls.filter((c) => !firstRunCalls.includes(c) && new URL(c.url).pathname === '/ping')
+    expect(fullRunCalls).toHaveLength(8) // 每个入口保留1次预热和3次正式采样
     expect(wrapper.text()).toContain('推荐进入')
     expect(wrapper.text()).toContain('国内入口')
     expect(redirectTo).not.toHaveBeenCalled()

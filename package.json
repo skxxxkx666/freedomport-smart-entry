@@ -1,9 +1,9 @@
 {
-  "name": "freedomport-smart-entry",
+  "name": "smart-entry-selector",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "FreedomPort 智能入口：自动检测国内与国际入口 HTTP 延迟并跳转到最快入口",
+  "description": "智能入口选择器：快速检测可用入口，支持手动多轮延迟对比",
   "scripts": {
     "dev": "vite",
     "type-check": "vue-tsc --noEmit -p tsconfig.json",

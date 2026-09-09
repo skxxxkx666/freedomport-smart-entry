@@ -8,6 +8,7 @@ import { computeMedian } from '@/utils/median'
 import type { ExitIpState, EndpointTestResult, EndpointLiveState, LatencySample, TestStatus } from '@/types/latency'
 
 export type EntryPhase = 'idle' | 'testing' | 'complete'
+export const AUTO_ENTRY_BUDGET_MS = 3000
 
 export interface EntryTestState {
   phase: EntryPhase
@@ -20,6 +21,7 @@ export interface EntryTestState {
   manual: boolean
   debug: boolean
   noTest: boolean
+  quick: boolean
 }
 
 function emptyLiveState(): EndpointLiveState {
@@ -46,6 +48,7 @@ export function useEntryTest() {
     manual: query.manual,
     debug: query.debug,
     noTest: query.noTest,
+    quick: false,
   })
 
   let runId = 0
@@ -89,6 +92,10 @@ export function useEntryTest() {
 
   function finalizeRun(id: number, outcomes: EndpointTestResult[], signal: AbortSignal): void {
     if (isStale(id)) return
+    for (const live of Object.values(state.live)) {
+      live.status = 'idle'
+      live.progress = null
+    }
     for (const outcome of outcomes) {
       state.results[outcome.endpointId] = outcome
       const live = state.live[outcome.endpointId]
@@ -102,22 +109,33 @@ export function useEntryTest() {
     runIpLookup(id, signal)
   }
 
-  async function runRealTest(): Promise<void> {
+  async function runRealTest(quick = false): Promise<void> {
     runId += 1
     const id = runId
     const signal = resetForRun().signal
+    state.quick = quick
+    const probes = new AbortController()
+    const abortProbes = () => probes.abort()
+    signal.addEventListener('abort', abortProbes)
+    let budgetTimer: ReturnType<typeof setTimeout> | undefined
+    const outcomes: EndpointTestResult[] = []
+    let finishQuick!: () => void
+    const quickFinished = new Promise<void>((resolve) => { finishQuick = resolve })
+    if (quick) budgetTimer = setTimeout(finishQuick, AUTO_ENTRY_BUDGET_MS)
 
     try {
-      const outcomes = await Promise.all(
+      const allFinished = Promise.all(
         ENDPOINTS.map(async (endpoint: EntryEndpoint) => {
-          return testEndpoint(endpoint, {
-            signal,
+          const outcome = await testEndpoint(endpoint, {
+            signal: probes.signal,
+            ...(quick ? { warmupCount: 0, formalCount: 1 } : {}),
             onStatus: (status: TestStatus) => {
-              if (isStale(id)) return
+              if (isStale(id) || probes.signal.aborted) return
               state.live[endpoint.id].status = status
+              state.live[endpoint.id].progress = { round: 1, total: quick ? 1 : 3 }
             },
             onSample: (sample: LatencySample, phase: 'warmup' | 'formal', round: number, total: number) => {
-              if (isStale(id)) return
+              if (isStale(id) || probes.signal.aborted) return
               const live = state.live[endpoint.id]
               if (phase === 'formal') {
                 live.samples.push(sample)
@@ -125,14 +143,24 @@ export function useEntryTest() {
               }
             },
           })
+          if (!probes.signal.aborted) outcomes.push(outcome)
+          if (quick && outcome.successCount > 0) finishQuick()
         }),
       )
+      if (quick) await Promise.race([allFinished, quickFinished])
+      else await allFinished
+      if (signal.aborted) return
+      probes.abort()
       finalizeRun(id, outcomes, signal)
     } catch (err) {
       if (isStale(id)) return
       if (err instanceof AbortedError) return
       state.finishedAt = Date.now()
       state.phase = 'complete'
+    } finally {
+      clearTimeout(budgetTimer)
+      probes.abort()
+      signal.removeEventListener('abort', abortProbes)
     }
   }
 
@@ -140,6 +168,7 @@ export function useEntryTest() {
     runId += 1
     const id = runId
     const signal = resetForRun().signal
+    state.quick = false
 
     const plan: Record<string, number> = { cn: 42, global: 118 }
     const total = 3

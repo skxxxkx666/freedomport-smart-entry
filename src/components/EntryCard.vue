@@ -39,7 +39,7 @@ const statusText = computed(() => {
     case 'warming':
       return '正在建立连接'
     case 'testing':
-      return `正在测试，第 ${props.live.progress?.round ?? 1}/3 次`
+      return `正在测试，第 ${props.live.progress?.round ?? 1}/${props.live.progress?.total ?? 3} 次`
     case 'success':
       return '连接正常'
     case 'timeout':

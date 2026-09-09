@@ -6,7 +6,7 @@ import RecommendationPanel from '@/components/RecommendationPanel.vue'
 import DebugPanel from '@/components/DebugPanel.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { ENDPOINTS, getEndpoint } from '@/config/endpoints'
-import { useEntryTest } from '@/composables/useEntryTest'
+import { useEntryTest, AUTO_ENTRY_BUDGET_MS } from '@/composables/useEntryTest'
 import { redirectTo } from '@/utils/redirect'
 
 const TOTAL_COUNTDOWN_MS = 2000
@@ -45,9 +45,17 @@ function startCountdown(endpointId: string): void {
   stopCountdown()
   countdownCancelled.value = false
   countdownMs.value = TOTAL_COUNTDOWN_MS
+  if (state.quick && state.startedAt !== null) {
+    countdownMs.value = Math.max(0, Math.min(TOTAL_COUNTDOWN_MS, state.startedAt + AUTO_ENTRY_BUDGET_MS - Date.now()))
+  }
+  const deadline = Date.now() + countdownMs.value
+  if (countdownMs.value === 0) {
+    jumpTo(endpointId)
+    return
+  }
   countdownActive.value = true
   countdownTimer = window.setInterval(() => {
-    countdownMs.value = Math.max(0, countdownMs.value - 100)
+    countdownMs.value = Math.max(0, deadline - Date.now())
     if (countdownMs.value <= 0) {
       stopCountdown()
       jumpTo(endpointId)
@@ -101,14 +109,14 @@ function cancelAutoJump(): void {
   stopCountdown()
 }
 
-function startTest(): void {
+function startTest(quick = false): void {
   stopCountdown()
   countdownCancelled.value = false
   jumped.value = false
   if (state.noTest && import.meta.env.DEV) {
     void runSimulatedTest()
   } else {
-    void runRealTest()
+    void runRealTest(quick)
   }
 }
 
@@ -132,7 +140,7 @@ watch(
 )
 
 onMounted(() => {
-  startTest()
+  startTest(!state.manual)
 })
 
 onUnmounted(() => {
@@ -174,7 +182,7 @@ onUnmounted(() => {
       <TestProgress
         v-if="isTesting"
         :round="currentRound"
-        :total="3"
+        :total="state.quick ? 1 : 3"
       />
       <RecommendationPanel
         v-else-if="state.phase === 'complete'"
