@@ -8,6 +8,7 @@ import ThemeToggle from '@/components/ThemeToggle.vue'
 import { ENDPOINTS, getEndpoint } from '@/config/endpoints'
 import { useEntryTest, AUTO_ENTRY_BUDGET_MS } from '@/composables/useEntryTest'
 import { redirectTo } from '@/utils/redirect'
+import brandMark from '@/assets/logo-glyph.png?inline'
 
 const TOTAL_COUNTDOWN_MS = 2000
 
@@ -153,7 +154,7 @@ onUnmounted(() => {
   <main class="page">
     <header class="topbar">
       <div class="brand">
-        <img class="brand__mark" src="/logo-glyph.png" alt="" width="34" height="34" />
+        <img class="brand__mark" :src="brandMark" alt="" width="34" height="34" />
         <span class="brand__name">FreedomPort</span>
       </div>
       <ThemeToggle />
